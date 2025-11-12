@@ -50,11 +50,16 @@ function mapFdaRecordToNdc(record: FDANdcRecord): NDC | null {
 	return {
 		productNdc: record.product_ndc,
 		productName: productName,
+		brandName: record.brand_name,
+		genericName: record.generic_name,
 		dosageForm: record.dosage_form || 'Unknown',
 		strength: record.active_ingredients?.[0]?.strength || 'Unknown',
+		activeIngredients: record.active_ingredients,
 		packageSize: size,
 		unit: unit,
-		isActive: isActive
+		isActive: isActive,
+		listedDate: record.listed,
+		packageDescription: packageDescription
 	};
 }
 
@@ -64,16 +69,40 @@ function mapFdaRecordToNdc(record: FDANdcRecord): NDC | null {
  */
 export async function getNdcsByDrugName(drugName: string): Promise<NDC[] | ApiError> {
 	try {
+		// Clean and prepare search terms
+		const cleanedName = drugName.trim();
+		const words = cleanedName.split(/\s+/);
+		const firstWord = words[0];
+		const lastWord = words[words.length - 1];
+		
+		// Remove common words that might interfere with search
+		const commonWords = ['insulin', 'tablet', 'capsule', 'liquid', 'suspension', 'solution', 'injection', 'pen', 'vial'];
+		const filteredWords = words.filter(w => !commonWords.includes(w.toLowerCase()));
+		const withoutCommonWords = filteredWords.length > 0 ? filteredWords.join(' ') : cleanedName;
+		
 		// Try multiple search strategies
 		// FDA API search format: search=field:"value" or search=field:value
 		const searchQueries = [
-			`brand_name:"${drugName}"`,
-			`generic_name:"${drugName}"`,
-			`brand_name:${drugName}`,
-			`generic_name:${drugName}`,
-			`brand_name:"${drugName.split(' ')[0]}"`,
-			`generic_name:"${drugName.split(' ')[0]}"`
-		];
+			// Exact matches
+			`brand_name:"${cleanedName}"`,
+			`generic_name:"${cleanedName}"`,
+			`product_name:"${cleanedName}"`,
+			// Without quotes
+			`brand_name:${cleanedName}`,
+			`generic_name:${cleanedName}`,
+			`product_name:${cleanedName}`,
+			// First word only
+			`brand_name:"${firstWord}"`,
+			`generic_name:"${firstWord}"`,
+			`product_name:"${firstWord}"`,
+			// Without common words
+			`brand_name:"${withoutCommonWords}"`,
+			`generic_name:"${withoutCommonWords}"`,
+			`product_name:"${withoutCommonWords}"`,
+			// Last word (sometimes brand names are at the end)
+			words.length > 1 ? `brand_name:"${lastWord}"` : null,
+			words.length > 1 ? `product_name:"${lastWord}"` : null
+		].filter((q): q is string => q !== null);
 
 		for (const searchQuery of searchQueries) {
 			// Build URL with proper encoding
@@ -92,13 +121,27 @@ export async function getNdcsByDrugName(drugName: string): Promise<NDC[] | ApiEr
 
 					if (data.results && data.results.length > 0) {
 						const ndcs: NDC[] = [];
+						const searchTerms = [
+							cleanedName.toLowerCase(),
+							firstWord.toLowerCase(),
+							withoutCommonWords.toLowerCase()
+						].filter(term => term.length > 0);
+						
 						for (const record of data.results) {
 							const ndc = mapFdaRecordToNdc(record);
 							if (ndc) {
-								// Filter to match drug name (case-insensitive)
+								// More flexible matching - check if any search term matches
 								const recordName = (record.brand_name || record.generic_name || record.product_name || '').toLowerCase();
-								const searchName = drugName.toLowerCase();
-								if (recordName.includes(searchName) || searchName.includes(recordName.split(' ')[0])) {
+								const recordWords = recordName.split(/\s+/);
+								
+								// Match if any search term appears in record name or vice versa
+								const matches = searchTerms.some(term => 
+									recordName.includes(term) || 
+									term.includes(recordName.split(' ')[0]) ||
+									recordWords.some(word => word.includes(term) || term.includes(word))
+								);
+								
+								if (matches) {
 									ndcs.push(ndc);
 								}
 							}
@@ -108,13 +151,9 @@ export async function getNdcsByDrugName(drugName: string): Promise<NDC[] | ApiEr
 							return ndcs;
 						}
 					}
-				} else if (response.status !== 404) {
-					// If it's not a 404, log the error but continue trying other searches
-					console.warn(`FDA API search failed with status ${response.status} for query: ${searchQuery}`);
 				}
 			} catch (fetchError) {
 				// Continue to next search query if this one fails
-				console.warn(`FDA API fetch error for query ${searchQuery}:`, fetchError);
 				continue;
 			}
 		}
@@ -206,13 +245,9 @@ export async function getNdcsByNdc(ndc: string): Promise<NDC[] | ApiError> {
 							return ndcs;
 						}
 					}
-				} else if (response.status !== 404) {
-					// If it's not a 404, log but continue trying other searches
-					console.warn(`FDA API search failed with status ${response.status} for query: ${searchQuery}`);
 				}
 			} catch (fetchError) {
 				// Continue to next search query if this one fails
-				console.warn(`FDA API fetch error for query ${searchQuery}:`, fetchError);
 				continue;
 			}
 		}

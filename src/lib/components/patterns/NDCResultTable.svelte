@@ -4,9 +4,10 @@
 
 	interface Props {
 		matchedNdcs: MatchedNDC[];
+		onNdcSelect?: (ndc: MatchedNDC) => void;
 	}
 
-	let { matchedNdcs }: Props = $props();
+	let { matchedNdcs, onNdcSelect }: Props = $props();
 </script>
 
 {#if matchedNdcs.length > 0}
@@ -33,11 +34,47 @@
 							class="row"
 							data-optimal={ndc.isOptimal}
 							data-inactive={!ndc.isActive}
+							data-multipack={!!ndc.multiPack}
+							role="button"
+							tabindex="0"
+							onclick={() => onNdcSelect?.(ndc)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									onNdcSelect?.(ndc);
+								}
+							}}
+							title="Click to view detailed drug information"
 						>
-							<td class="ndc-code">{ndc.productNdc}</td>
-							<td class="product-name">{ndc.productName}</td>
+							<td class="ndc-code">
+								{#if ndc.multiPack}
+									<div class="multipack-indicator">Multi-pack</div>
+								{:else}
+									{ndc.productNdc}
+								{/if}
+							</td>
+							<td class="product-name">
+								{#if ndc.multiPack}
+									<div class="multipack-combo">
+										{#each ndc.multiPack as combo}
+											<div class="combo-item">
+												{combo.packages}× {combo.ndc.packageSize} {combo.ndc.unit}
+												<span class="combo-ndc">({combo.ndc.productNdc})</span>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									{ndc.productName}
+								{/if}
+							</td>
 							<td class="package-size">
-								{ndc.packageSize} {ndc.unit}
+								{#if ndc.multiPack}
+									<div class="multipack-total">
+										{ndc.multiPack.reduce((sum, c) => sum + c.ndc.packageSize * c.packages, 0)} {ndc.unit}
+									</div>
+								{:else}
+									{ndc.packageSize} {ndc.unit}
+								{/if}
 							</td>
 							<td class="packages-needed">{ndc.packagesNeeded}</td>
 							<td class="overfill-underfill">
@@ -53,10 +90,13 @@
 								{#if ndc.isOptimal}
 									<span class="badge optimal">Optimal</span>
 								{/if}
+								{#if ndc.multiPack}
+									<span class="badge multipack">Multi-pack</span>
+								{/if}
 								{#if !ndc.isActive}
 									<span class="badge inactive">Inactive</span>
 								{/if}
-								{#if ndc.isActive && !ndc.isOptimal}
+								{#if ndc.isActive && !ndc.isOptimal && !ndc.multiPack}
 									<span class="badge">Available</span>
 								{/if}
 							</td>
@@ -133,8 +173,18 @@
 		color: #212121;
 	}
 
-	.table tbody tr:hover {
+	.table tbody tr[role='button'] {
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.table tbody tr[role='button']:hover {
 		background-color: #f5f5f5;
+	}
+
+	.table tbody tr[role='button']:focus {
+		outline: 2px solid #2196f3;
+		outline-offset: -2px;
 	}
 
 	.table tbody tr[data-optimal='true'] {
@@ -145,6 +195,11 @@
 	.table tbody tr[data-inactive='true'] {
 		background-color: rgba(244, 67, 54, 0.05);
 		opacity: 0.7;
+	}
+
+	.table tbody tr[data-multipack='true'] {
+		background-color: rgba(33, 150, 243, 0.05);
+		border-left: 3px solid #2196f3;
 	}
 
 	.ndc-code {
@@ -213,6 +268,40 @@
 	.badge.inactive {
 		background-color: #f44336;
 		color: white;
+	}
+
+	.badge.multipack {
+		background-color: #2196f3;
+		color: white;
+	}
+
+	.multipack-indicator {
+		font-weight: 600;
+		color: #2196f3;
+		font-size: 0.75rem;
+	}
+
+	.multipack-combo {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.combo-item {
+		font-size: 0.875rem;
+		line-height: 1.4;
+	}
+
+	.combo-ndc {
+		font-family: monospace;
+		font-size: 0.75rem;
+		color: #757575;
+		margin-left: 0.5rem;
+	}
+
+	.multipack-total {
+		font-weight: 600;
+		color: #2196f3;
 	}
 
 	.empty-state {

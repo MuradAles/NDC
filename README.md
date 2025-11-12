@@ -34,10 +34,19 @@ npm install
 ```
 
 3. Environment variables (optional):
-   - No API keys required! Both APIs are public and free:
-     - **RxNorm API**: Public, no key needed
-     - **FDA NDC Directory API**: Public, no key needed
-   - If you want to add AI features later (see `AI_ENHANCEMENTS.md`), you may need an OpenAI API key
+   - Copy `.env.example` to `.env` and add your keys:
+   ```bash
+   cp .env.example .env
+   ```
+   - **OpenAI API Key** (optional but recommended):
+     - Enables AI-powered search suggestions when drugs aren't found
+     - Get from: https://platform.openai.com/api-keys
+     - Add to `.env`: `OPENAI_API_KEY=your_key_here`
+   - **RxNorm API Key** (optional):
+     - Better drug normalization (works without it, but key recommended)
+     - Get from: https://uts.nlm.nih.gov/uts/
+     - Add to `.env`: `RXNORM_API_KEY=your_key_here`
+   - **FDA NDC Directory API**: Public, no key needed
 
 ### Development
 
