@@ -10,6 +10,7 @@
 	import DrugDetailsCard from '$lib/components/patterns/DrugDetailsCard.svelte';
 	import type { PrescriptionInput, PrescriptionResult } from '$lib/types/prescription';
 	import type { MatchedNDC } from '$lib/types/ndc';
+	import { calculatePrescription } from '$lib/utils/api/client-calculate';
 
 	let drugName = $state('');
 	let ndc = $state('');
@@ -38,24 +39,14 @@
 				daysSupply: Number(daysSupply)
 			};
 
-			// Note: Browser console may show 404 errors - this is expected browser behavior
-			// We handle these gracefully in the UI below
-			const response = await fetch('/api/calculate', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(input)
-			});
+			const data = await calculatePrescription(input);
 
-			const data = await response.json();
-
-			if (!response.ok) {
-				// Handle different error types - 404s are expected when drugs aren't found
-				if (response.status === 404) {
+			if ('error' in data) {
+				// Handle different error types
+				if (data.error === 'NDC_LOOKUP_ERROR' || data.error === 'NO_NDCS_FOUND' || data.error === 'NO_MATCHES_FOUND') {
 					errorType = 'warning';
 					errorTitle = 'Not Found';
-				} else if (response.status === 400) {
+				} else if (data.error === 'VALIDATION_ERROR' || data.error === 'SIG_PARSE_ERROR') {
 					errorType = 'warning';
 					errorTitle = 'Invalid Input';
 				} else {
@@ -106,24 +97,14 @@
 				daysSupply: Number(daysSupply)
 			};
 
-			// Note: Browser console may show 404 errors - this is expected browser behavior
-			// We handle these gracefully in the UI below
-			const response = await fetch('/api/calculate', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(input)
-			});
+			const data = await calculatePrescription(input);
 
-			const data = await response.json();
-
-			if (!response.ok) {
-				// Handle different error types - 404s are expected when drugs aren't found
-				if (response.status === 404) {
+			if ('error' in data) {
+				// Handle different error types
+				if (data.error === 'NDC_LOOKUP_ERROR' || data.error === 'NO_NDCS_FOUND' || data.error === 'NO_MATCHES_FOUND') {
 					errorType = 'warning';
 					errorTitle = 'Not Found';
-				} else if (response.status === 400) {
+				} else if (data.error === 'VALIDATION_ERROR' || data.error === 'SIG_PARSE_ERROR') {
 					errorType = 'warning';
 					errorTitle = 'Invalid Input';
 				} else {

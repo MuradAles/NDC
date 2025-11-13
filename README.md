@@ -168,6 +168,23 @@ Calculate prescription quantity and find optimal NDC matches.
 
 ## Deployment
 
+### GitHub Pages
+
+This project is configured for GitHub Pages deployment using GitHub Actions.
+
+1. **Enable GitHub Pages**:
+   - Go to your repository Settings > Pages
+   - Under "Source", select "GitHub Actions"
+
+2. **Push to main branch**:
+   - The GitHub Actions workflow will automatically build and deploy on every push to `main`
+   - The site will be available at `https://<username>.github.io/<repository-name>/`
+
+3. **Manual deployment**:
+   - You can also trigger deployment manually from the Actions tab
+
+**Note**: This app uses client-side API calls (FDA and RxNorm APIs are public), so it works perfectly with static hosting.
+
 ### GCP Deployment
 
 1. Build the production version:
@@ -184,7 +201,7 @@ npm run build
 - Component-first development approach
 - Minimal dependencies (SvelteKit built-ins)
 - TypeScript throughout for type safety
-- Server-side API calls (keeps API keys secure)
+- Client-side API calls (FDA and RxNorm APIs are public, no keys needed)
 
 ## License
 
