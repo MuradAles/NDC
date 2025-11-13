@@ -9,7 +9,9 @@ const config = {
 
 	kit: {
 		paths: {
-			base: process.env.PUBLIC_BASE_PATH || ''
+			// GitHub Pages base path - repository name is NDC
+			// Use /NDC for production builds, empty for local dev
+			base: process.env.NODE_ENV === 'production' ? '/NDC' : ''
 		},
 		adapter: adapter({
 			// default options are shown. On some platforms
